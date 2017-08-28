@@ -1,0 +1,79 @@
+FORMAT: 1A
+
+# MQTT-MANAGER API
+
+Endpoint to perform device authentication/authorization management
+
+# Group CRUD
+## Device CRUD [/notifyDeviceChange]
+### Create Device [POST]
+Add a device and a related topic on the ACL.
+
++ Request (application/json)
+  + Body
+    { 
+      "action": "create",
+      "device": "device21",
+      "topic" : "/middleware/221b/attrs"
+    }
++ Response 200 (application/json)
+  {
+    "message": "ok",
+    "status": 200
+  }
+
+### Update Device [POST]
+Update the topic of an existing device.
+
++ Request (application/json)
+  + Body
+    { 
+      "action": "update",
+      "device": "device21",
+      "topic" : "/middleware/221b/attrs"
+    }
++ Response 404 (application/json)
+  {
+    "message": "No device with name device21 found in ACL",
+    "status": 404
+  }
++ Response 200 (application/json)
+  {
+    "message": "ok",
+    "status": 200
+  }
+
+### Delete Device [POST]
+Delete a device from the ACL and ask EJBCA for an updated version of the CRL.
+
++ Request (application/json)
+  + Body
+    { 
+      "action": "delete",
+      "device": "device21",
+    }
++ Response 503 (application/json)
+  {
+    "message": "Can't connect to EJBCA REST service",
+    "status": 503
+  }
++ Response 500 (application/json)
+  {
+    "message": "Invalid answer returned from EJBCA.",
+    "status": 500
+  }
++ Response 500 (application/json)
+  {
+    "message": "The CRL returned by EJBCA could not be decoded",
+    "status": 500
+  }
++ Response 404 (application/json)
+  {
+    "message": "No device with name device21 found in ACL",
+    "status": 404
+  }
++ Response 200 (application/json)
+  {
+    "message": "Device device21 removed from ACL",
+    "status": 200
+  }

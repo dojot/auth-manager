@@ -74,7 +74,7 @@ def processCRL(rawCrl):
     except OpenSSL.crypto.Error:
         return False
     
-    crlFile = open(conf.CAName + ".crl","w")
+    crlFile = open(conf.CRLDir + conf.CAName + ".crl","w")
     crlFile.write(crl)
     crlFile.close()
     return True
