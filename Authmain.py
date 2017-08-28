@@ -8,13 +8,9 @@ from flask import Flask
 from flask import request
 from flask import make_response as fmake_response
 
-#TODO: move this to a configuration file
-defaultHeader = {'content-type':'application/json', 'Accept': 'application/json'}
-CAName = "DUMMY"
-ACLfilePath = "access.acl"
+import conf
 
 app = Flask(__name__)
-# CORS(app)
 app.url_map.strict_slashes = False
 
 def make_response(payload, status):
@@ -56,7 +52,7 @@ def notifyDeviceChange():
 
 def updateCRL():
     try:
-        response = requests.get("http://localhost:5000/ca/" + CAName + "/crl",  headers=defaultHeader)
+        response = requests.get("http://localhost:5000/ca/" + conf.CAName + "/crl",  headers=conf.defaultHeader)
     except requests.exceptions.ConnectionError:
         return formatResponse(503,"Can't connect to EJBCA REST service.")
     try:
@@ -83,7 +79,7 @@ def processCRL(rawCrl):
     #for rvk in crl_object.get_revoked():
     #    print "Serial:", rvk.get_serial()
 
-    crlFile = open(CAName + ".crl","w")
+    crlFile = open(conf.CAName + ".crl","w")
     crlFile.write(crl)
     crlFile.close()
     return True
@@ -106,7 +102,7 @@ def addDeviceACLRequest(requestData):
     topic = requestData['topic']
     
     #TODO: check if user aready exist?
-    crlFile = open(ACLfilePath,"a")
+    crlFile = open(conf.ACLfilePath,"a")
 
     #user can write on
     crlFile.write("user " + deviceName )
@@ -122,10 +118,10 @@ def removeDeviceACL(deviceName):
     userfound = False
 
     try:
-        crlFile = open(ACLfilePath,"r")
+        crlFile = open(conf.ACLfilePath,"r")
     except IOError:
         return False
-    newCrlFile =  open(ACLfilePath + ".tmp","w")
+    newCrlFile =  open(conf.ACLfilePath + ".tmp","w")
     for line in crlFile:
         if deviceName not in line:
             newCrlFile.write(line)
@@ -136,11 +132,11 @@ def removeDeviceACL(deviceName):
     crlFile.close()
     newCrlFile.close()
     if not userfound:
-        os.remove(ACLfilePath + ".tmp")
+        os.remove(conf.ACLfilePath + ".tmp")
         return False
 
-    os.remove(ACLfilePath)
-    os.rename(ACLfilePath + ".tmp",ACLfilePath)
+    os.remove(conf.ACLfilePath)
+    os.rename(conf.ACLfilePath + ".tmp",conf.ACLfilePath)
     return True
 
 def removeDeviceACLRequest(requestData):
