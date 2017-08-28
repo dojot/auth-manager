@@ -42,10 +42,10 @@ def notifyDeviceChange():
         return addDeviceACLRequest(requestData)
 
     elif requestData['action'] == 'delete':
+        crlStatus = updateCRL()
+        if crlStatus != True:
+            return crlStatus
         return removeDeviceACLRequest(requestData)
-
-    elif requestData['action'] == 'crl':
-        return updateCRL()
     
     else:
         return formatResponse(400, "'Action' " + requestData['action'] + " not implemented")
@@ -58,14 +58,14 @@ def updateCRL():
     try:
         newCRL = json.loads( response.content )['CRL']
         if processCRL(newCRL):
-            return formatResponse(200)
+            return True
         else:
             return formatResponse(500, "The CRL returned by EJBCA could not be decoded")
     except KeyError:
         return formatResponse(500,"Invalid answer returned from EJBCA.")
     
 
-#receve a PEM CRL. If its valid, save to file
+#receve a PEM CRL. If its valid, save to file crl
 def processCRL(rawCrl):
     crl = "-----BEGIN X509 CRL-----\n" + re.sub("(.{64})", "\\1\n", rawCrl, 0, re.DOTALL)  + "\n-----END X509 CRL-----\n"
     
@@ -73,12 +73,7 @@ def processCRL(rawCrl):
         crl_object = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl)
     except OpenSSL.crypto.Error:
         return False
-
-    #list the revoked certificate serial numbers
-    #TODO: remove revoked devices from the ACL?
-    #for rvk in crl_object.get_revoked():
-    #    print "Serial:", rvk.get_serial()
-
+    
     crlFile = open(conf.CAName + ".crl","w")
     crlFile.write(crl)
     crlFile.close()
