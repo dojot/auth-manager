@@ -42,27 +42,26 @@ def notifyDeviceChange():
         return addDeviceACLRequest(requestData)
 
     elif requestData['action'] == 'delete':
-        crlStatus = updateCRL()
-        if crlStatus != True:
-            return crlStatus
+        try:
+            crlStatus = updateCRL()
+        except requests.exceptions.ConnectionError:
+            return formatResponse(503,"Can't connect to EJBCA REST service.")
+        except KeyError:
+            return formatResponse(500,"Invalid answer returned from EJBCA.")
+        except ValueError as err:
+            return formatResponse(500,err.message)
+
         return removeDeviceACLRequest(requestData)
-    
     else:
         return formatResponse(400, "'Action' " + requestData['action'] + " not implemented")
 
 def updateCRL():
-    try:
-        response = requests.get("http://localhost:5000/ca/" + conf.CAName + "/crl",  headers=conf.defaultHeader)
-    except requests.exceptions.ConnectionError:
-        return formatResponse(503,"Can't connect to EJBCA REST service.")
-    try:
-        newCRL = json.loads( response.content )['CRL']
-        if processCRL(newCRL):
-            return True
-        else:
-            return formatResponse(500, "The CRL returned by EJBCA could not be decoded")
-    except KeyError:
-        return formatResponse(500,"Invalid answer returned from EJBCA.")
+    response = requests.get(conf.EJBCA_API_URL + conf.CAName + "/crl",  headers=conf.defaultHeader)
+    newCRL = json.loads( response.content )['CRL']
+    if processCRL(newCRL):
+        return True
+    else:
+        raise ValueError('The CRL returned by EJBCA could not be decoded')    
     
 
 #receve a PEM CRL. If its valid, save to file crl
@@ -145,5 +144,5 @@ def removeDeviceACLRequest(requestData):
         return formatResponse(404, "No device with name " + deviceName + " found in ACL")      
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int("9010"), threaded=True)
+    app.run(host='0.0.0.0', port=int(conf.APIport), threaded=True)
     
