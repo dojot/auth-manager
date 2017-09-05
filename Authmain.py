@@ -3,6 +3,7 @@ import json, requests
 import OpenSSL
 import re
 import os
+import signal
 
 from flask import Flask
 from flask import request
@@ -28,6 +29,12 @@ def formatResponse(status, message=None):
         payload = json.dumps({ 'message': 'Request failed', 'status': status})
     return make_response(payload, status)
 
+def reloadMosquittoConf():
+    f = open(conf.mosquittoPIDfile,"r")
+    os.kill( int(f.readline()) , signal.SIGHUP)
+    f.close()
+     
+
 @app.route('/notifyDeviceChange', methods=['POST'])
 def notifyDeviceChange():
     try:
@@ -43,7 +50,7 @@ def notifyDeviceChange():
 
     elif requestData['action'] == 'delete':
         try:
-            crlStatus = updateCRL()
+            updateCRL()
         except requests.exceptions.ConnectionError:
             return formatResponse(503,"Can't connect to EJBCA REST service.")
         except KeyError:
@@ -56,7 +63,7 @@ def notifyDeviceChange():
         return formatResponse(400, "'Action' " + requestData['action'] + " not implemented")
 
 def updateCRL():
-    response = requests.get(conf.EJBCA_API_URL + conf.CAName + "/crl",  headers=conf.defaultHeader)
+    response = requests.get(conf.EJBCA_API_URL + '/ca/' + conf.CAName + "/crl",  headers=conf.defaultHeader)
     newCRL = json.loads( response.content )['CRL']
     if processCRL(newCRL):
         return True
@@ -73,7 +80,7 @@ def processCRL(rawCrl):
     except OpenSSL.crypto.Error:
         return False
     
-    crlFile = open(conf.CRLDir + conf.CAName + ".crl","w")
+    crlFile = open(conf.certsDir + conf.CAName + ".crl","w")
     crlFile.write(crl)
     crlFile.close()
     return True
@@ -104,6 +111,7 @@ def addDeviceACLRequest(requestData):
     crlFile.write("\n")
 
     crlFile.close()
+    reloadMosquittoConf()
     return formatResponse(200)
 
 #remove a device from ACL file
@@ -139,6 +147,7 @@ def removeDeviceACLRequest(requestData):
 
     deviceName = requestData['device']
     if removeDeviceACL(deviceName):
+        reloadMosquittoConf()
         return formatResponse(200, "Device " + deviceName + " removed from ACL")
     else:
         return formatResponse(404, "No device with name " + deviceName + " found in ACL")      

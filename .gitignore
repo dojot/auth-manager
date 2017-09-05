@@ -1,4 +1,6 @@
 *.pem
 *.crt
 *.crl
+*.csr
 *.pyc
+*.key
