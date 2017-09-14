@@ -1,7 +1,7 @@
 #configuration file
 APIport = 9010
 
-EJBCA_API_URL = "http://localhost:5000"
+EJBCA_API_URL = "http://ejbca:5583"
 defaultHeader = {'content-type':'application/json', 'Accept': 'application/json'}
 
 CAName = "IOTmidCA"

@@ -1,7 +1,7 @@
 #!/usr/bin/python
-#this script make the initial configuration to use TLS with mqtt
-# it generate the mosquitto key pair and retrieve a certificate and CRL from CA
-# if the configuration has already done before, this script does nothing
+#this script makes the initial configuration to use TLS with mosquitto
+# it generates the mosquitto key pair and retrieves a certificate and CRL from CA
+# if the configuration has already been done before, this script does nothing
 
 import conf
 import os
@@ -118,7 +118,7 @@ def retrieveCAChain():
         exit(-1)
     
     try:
-        rawCrt = json.loads( response.content )['status'][0]['certificateData']
+        rawCrt = json.loads( response.content )['certificate']
     except KeyError:
         print "Invalid answer returned from EJBCA."
         exit(-1)

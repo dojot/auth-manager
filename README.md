@@ -5,12 +5,12 @@
 This container bundles mosquitto with mqtt-manager.
 Mosquitto is an open source message broker that implements the MQTT protocol.
 mqtt-manager provides a REST service to update mosquitto access control list (ACL)
-and TLS options easy and 'on the fly'.
+and TLS options easily and 'on the fly'.
 
-### Instalation
-All mqtt-manager and mosquitto dependences should be automatic downloaded and configured by docker.
+### Running
+All mqtt-manager and mosquitto dependencies should be automatically downloaded and configured when building the container.
 
-* mqtt-manager depends on a running instance of ejbca-rest
+* mqtt-manager depends on a running instance of [ejbca-rest](http://github.com/dojot/ejbca-rest)
 
 ## API
 
