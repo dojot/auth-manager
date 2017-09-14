@@ -12,6 +12,7 @@ COPY *.py  /var/www/app/
 COPY mosquitto-files/access.acl /usr/local/src/mosquitto-1.4.13/certs/access.acl
 COPY mosquitto-files/mosquitto.conf /usr/local/src/mosquitto-1.4.13/mosquitto.conf
 COPY initialConf.py /usr/local/src/mosquitto-1.4.13/initialConf.py
+COPY certUtils.py /usr/local/src/mosquitto-1.4.13/certUtils.py
 COPY entrypoint.sh /usr/local/src/mosquitto-1.4.13/
 
 COPY docker/nginx/flask.conf /etc/nginx/sites-available/
