@@ -1,7 +1,14 @@
 import re
+import requests
+import json
 from OpenSSL import crypto
 
-#may cause crypto.Error
+# this is a script with utility functions related to certificate files creation
+# and EJBCA-REST requests
+
+
+# the following functions are related to file manipulation
+# these functions  may throw crypto.Error
 
 def saveCRL(filename, rawCRL):
     crl = "-----BEGIN X509 CRL-----\n" + re.sub("(.{64})", "\\1\n", rawCRL, 0, re.DOTALL)  + "\n-----END X509 CRL-----\n"    
@@ -57,3 +64,60 @@ def generatePrivateKey(keyFile, bitLen):
     key.generate_key(crypto.TYPE_RSA, bitLen)
     with open(keyFile, "w") as keyFile:
         keyFile.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
+
+#default header for HTTP requests
+defaultHeader = {'content-type':'application/json', 'Accept': 'application/json'}
+
+
+# the following functions are related to EJBCA-REST requests
+# they may throw requests.exceptions.ConnectionError, KeyError or the custom EJBCARESTException
+
+class EJBCARESTException(Exception):
+    pass
+
+def retrieveCAChain(EJBCA_API_URL, CAName):    
+    response = requests.get(EJBCA_API_URL + '/ca/'+ CAName,  headers=defaultHeader)
+    return json.loads( response.content )['certificate']
+    
+def retrieveCACRL(EJBCA_API_URL, CAName):
+    response = requests.get(EJBCA_API_URL + '/ca/'+ CAName + "/crl",  headers=defaultHeader)
+    return json.loads( response.content )['CRL']
+
+def createEJBCAUser(EJBCA_API_URL, CAName, CName, passwd, certificateProfileName = "CFREE", endEntityProfileName = "EMPTY_CFREE"):
+     
+    #create the ejbca user
+    req = json.dumps( {
+        "caName": CAName,
+        "certificateProfileName": certificateProfileName,
+        "clearPwd": True,
+        "endEntityProfileName": endEntityProfileName,
+        "keyRecoverable": False,
+        "password": passwd,
+        "sendNotification": False,
+        "status": 10,
+        "subjectDN": "CN=" + CName,
+        "tokenType": "USERGENERATED",
+        "username": CName
+    } )
+    
+    response = requests.post(EJBCA_API_URL + "/user",  headers=defaultHeader, data = req)
+
+    if  response.status_code != 200:
+        raise EJBCARESTException( str(response.content) )
+
+def signCert(EJBCA_API_URL, csrFile, CName, passwd):    
+    with open(csrFile, "r") as csrFile:
+        csr = csrFile.read()
+    cutDownCLR = csr[csr.find('-----BEGIN CERTIFICATE REQUEST-----') + len('-----BEGIN CERTIFICATE REQUEST-----'):csr.find("-----END CERTIFICATE REQUEST-----")].replace("\n", "")
+
+    req = json.dumps({
+        "passwd": passwd,
+        "certificate": cutDownCLR
+    })
+    
+    response = requests.post(EJBCA_API_URL + "/user/" + CName + "/pkcs10",  headers=defaultHeader, data = req)
+        
+    if response.status_code == 200:
+        return json.loads(response.content)['status']['data']
+    else:
+        raise EJBCARESTException( str(response.content) )

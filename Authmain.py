@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import json, requests
 import OpenSSL
-import re
 import os
 import signal
 
@@ -10,6 +9,7 @@ from flask import request
 from flask import make_response as fmake_response
 
 import conf
+import certUtils
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -49,41 +49,28 @@ def notifyDeviceChange():
         return addDeviceACLRequest(requestData)
 
     elif requestData['action'] == 'delete':
-        try:
-            updateCRL()
-        except requests.exceptions.ConnectionError:
-            return formatResponse(503,"Can't connect to EJBCA REST service.")
-        except KeyError:
-            return formatResponse(500,"Invalid answer returned from EJBCA.")
-        except ValueError as err:
-            return formatResponse(500,err.message)
-
         return removeDeviceACLRequest(requestData)
+
     else:
         return formatResponse(400, "'Action' " + requestData['action'] + " not implemented")
 
+#receve a PEM CRL. If its valid, save to file
+@app.route('/crlupdate', methods=['POST'])
 def updateCRL():
-    response = requests.get(conf.EJBCA_API_URL + '/ca/' + conf.CAName + "/crl",  headers=conf.defaultHeader)
-    newCRL = json.loads( response.content )['CRL']
-    if processCRL(newCRL):
-        return True
-    else:
-        raise ValueError('The CRL returned by EJBCA could not be decoded')    
-    
+    try:
+        requestData = json.loads(request.data)
+    except ValueError:
+        return formatResponse(400, 'malformed JSON')
 
-#receve a PEM CRL. If its valid, save to file crl
-def processCRL(rawCrl):
-    crl = "-----BEGIN X509 CRL-----\n" + re.sub("(.{64})", "\\1\n", rawCrl, 0, re.DOTALL)  + "\n-----END X509 CRL-----\n"
+    if 'crl' not in requestData.keys():
+        return formatResponse(400, "missing crl")
     
     try:
-        crl_object = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl)
+        certUtils.saveCRL(conf.certsDir + conf.CAName + ".crl", requestData['crl'])
+        reloadMosquittoConf()
+        return formatResponse(200)
     except OpenSSL.crypto.Error:
-        return False
-    
-    crlFile = open(conf.certsDir + conf.CAName + ".crl","w")
-    crlFile.write(crl)
-    crlFile.close()
-    return True
+        return formatResponse(400, "PEM formated CRL could not be decoded")
 
 #add or update device
 def addDeviceACLRequest(requestData):
@@ -103,14 +90,14 @@ def addDeviceACLRequest(requestData):
     topic = requestData['topic']
     
     #TODO: check if user aready exist?
-    crlFile = open(conf.ACLfilePath,"a")
+    aclFile = open(conf.ACLfilePath,"a")
 
     #user can write on
-    crlFile.write("user " + deviceName )
-    crlFile.write("\ntopic write " + topic)
-    crlFile.write("\n")
+    aclFile.write("user " + deviceName )
+    aclFile.write("\ntopic write " + topic)
+    aclFile.write("\n")
 
-    crlFile.close()
+    aclFile.close()
     reloadMosquittoConf()
     return formatResponse(200)
 
@@ -120,19 +107,19 @@ def removeDeviceACL(deviceName):
     userfound = False
 
     try:
-        crlFile = open(conf.ACLfilePath,"r")
+        aclFile = open(conf.ACLfilePath,"r")
     except IOError:
         return False
-    newCrlFile =  open(conf.ACLfilePath + ".tmp","w")
-    for line in crlFile:
+    newaclFile =  open(conf.ACLfilePath + ".tmp","w")
+    for line in aclFile:
         if deviceName not in line:
-            newCrlFile.write(line)
+            newaclFile.write(line)
         else:
             #skip the line and the next one
-            line2 = crlFile.next()
+            line2 = aclFile.next()
             userfound = True
-    crlFile.close()
-    newCrlFile.close()
+    aclFile.close()
+    newaclFile.close()
     if not userfound:
         os.remove(conf.ACLfilePath + ".tmp")
         return False

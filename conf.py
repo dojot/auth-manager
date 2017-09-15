@@ -2,7 +2,6 @@
 APIport = 9010
 
 EJBCA_API_URL = "http://ejbca:5583"
-defaultHeader = {'content-type':'application/json', 'Accept': 'application/json'}
 
 CAName = "IOTmidCA"
 ACLfilePath = "/usr/local/src/mosquitto-1.4.13/certs/access.acl"

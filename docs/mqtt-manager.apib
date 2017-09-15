@@ -77,3 +77,24 @@ Delete a device from the ACL and ask EJBCA for an updated version of the CRL.
     "message": "Device device21 removed from ACL",
     "status": 200
   }
+
+# Group CRL
+## CRL Update [/crlupdate]
+### UPDATE CRL [POST]
+Receive a raw PEM CRL
+
++ Request (application/json)
+  + Body
+    { 
+      "crl": "*base64PEMCrl*"
+    }
++ Response 400 (application/json)
+  {
+    "status": 400,
+    "message": "PEM formated CRL could not be decoded"
+  }
++ Response 200 (application/json)
+  {
+    "message": "ok",
+    "status": 200
+  }
