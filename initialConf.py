@@ -8,6 +8,8 @@ import os
 import binascii
 from OpenSSL import crypto
 import certUtils
+from time import sleep
+import requests
 
 def generateKeys():
     if not os.path.isfile(conf.certsDir + 'mosquitto.key'):
@@ -63,10 +65,18 @@ def retrieveCRL():
             exit(-1)
 
 if __name__ == '__main__':
-    retrieveCAChain()
-    generateKeys()
-    generateCSR()
-    askCertSign()
-    retrieveCRL()
+    while True:
+        try:
+            retrieveCAChain()
+            generateKeys()
+            generateCSR()
+            askCertSign()
+            retrieveCRL()
+            break
+        except requests.exceptions.ConnectionError:
+            print "Cant connect to EJBCA server at " + conf.EJBCA_API_URL + "for initial configuration"
+            print "Chances are the server is not ready yet. Will retry in 30sec"
+            exit(-1)
+            sleep(30)
     exit(0)
 
