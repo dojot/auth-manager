@@ -74,9 +74,8 @@ if __name__ == '__main__':
             retrieveCRL()
             break
         except requests.exceptions.ConnectionError:
-            print "Cant connect to EJBCA server at " + conf.EJBCA_API_URL + "for initial configuration"
+            print "Cant connect to EJBCA server at " + conf.EJBCA_API_URL + " for initial configuration"
             print "Chances are the server is not ready yet. Will retry in 30sec"
-            exit(-1)
             sleep(30)
     exit(0)
 

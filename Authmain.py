@@ -134,6 +134,12 @@ def removeDeviceACLRequest(requestData):
 
     deviceName = requestData['device']
     if removeDeviceACL(deviceName):
+        try:
+            if 'crl' in requestData.keys():
+                certUtils.saveCRL(conf.certsDir + "/ca.crl", requestData['crl'])
+        except OpenSSL.crypto.Error:
+            return formatResponse(400, "PEM formated CRL could not be decoded")
+
         reloadMosquittoConf()
         return formatResponse(200, "Device " + deviceName + " removed from ACL")
     else:
